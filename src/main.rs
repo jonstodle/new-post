@@ -31,21 +31,14 @@ fn main() -> Result<(), Error> {
 
     let content_dir = locate_content_directory()?;
 
-    let file_contents = render_file_contents(&args.title, today, args.tags);
-
     let new_file_path = content_dir.join(format!("{}.md", create_safe_file_name(&args.title)));
 
-    fs::write(new_file_path.as_path(), file_contents)
-        .map_err(|e| Error::from_error("Failed to create file", &e))?;
+    write_file_contents(&args.title, today, args.tags, new_file_path.as_path())?;
 
     let editor = get_editor_command_string(args.editor)?;
 
-    let mut command = build_editor_command(editor, new_file_path.as_path());
+    run_editor(editor, new_file_path.as_path())?;
 
-    let _ = command
-        .spawn()
-        .map_err(|e| Error::from_error("Failed to start editor process", &e))?
-        .wait();
 
     Ok(())
 }
@@ -84,8 +77,13 @@ fn locate_content_directory() -> Result<PathBuf, Error> {
         .map(|de| de.path())
 }
 
-fn render_file_contents(title: &str, date: DateTime<Local>, tags: Vec<String>) -> String {
-    format!(
+fn write_file_contents(
+    title: &str,
+    date: DateTime<Local>,
+    tags: Vec<String>,
+    file_path: &Path,
+) -> Result<(), Error> {
+    let file_contents = format!(
         r#"+++
 title = "{title}"
 date = {date}
@@ -100,7 +98,11 @@ tags = [{tags}]
             .map(|s| format!(r#""{}""#, s))
             .collect::<Vec<_>>()
             .join(", "),
-    )
+    );
+
+    fs::write(new_file_path.as_path(), file_contents)
+        .map(|_| ())
+        .map_err(|e| Error::from_error("Failed to create file", &e))
 }
 
 fn create_safe_file_name(title: &str) -> String {
@@ -117,7 +119,7 @@ fn get_editor_command_string(editor_path: Option<String>) -> Result<String, Erro
     }
 }
 
-fn build_editor_command(editor: String, file_path: &Path) -> Command {
+fn run_editor(editor: String, file_path: &Path) -> Result<(), Error> {
     let mut editor_args = editor.split(' ').collect::<Vec<_>>();
     editor_args.push(
         file_path
@@ -130,6 +132,11 @@ fn build_editor_command(editor: String, file_path: &Path) -> Command {
     command.args(editor_args.iter().skip(1));
 
     command
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| Error::from_error("Failed to start editor process", &e))?
+        .wait()
+}
 }
 
 #[derive(Debug)]
