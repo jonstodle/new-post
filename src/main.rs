@@ -23,7 +23,7 @@ struct Arguments {
 
 fn main() -> Result<(), Error> {
     let args = Arguments::parse();
-    println!("{:?}", args);
+
     let today = Local::now()
         .date()
         .and_time(NaiveTime::default())
@@ -38,7 +38,6 @@ fn main() -> Result<(), Error> {
     let editor = get_editor_command_string(args.editor)?;
 
     run_editor(editor, new_file_path.as_path())?;
-
 
     Ok(())
 }
@@ -100,7 +99,7 @@ tags = [{tags}]
             .join(", "),
     );
 
-    fs::write(new_file_path.as_path(), file_contents)
+    fs::write(file_path, file_contents)
         .map(|_| ())
         .map_err(|e| Error::from_error("Failed to create file", &e))
 }
@@ -133,10 +132,10 @@ fn run_editor(editor: String, file_path: &Path) -> Result<(), Error> {
 
     command
         .spawn()
-        .map(|_| ())
         .map_err(|e| Error::from_error("Failed to start editor process", &e))?
         .wait()
-}
+        .map_err(|e| Error::from_error("Error occured during editor run time", &e))
+        .map(|_| ())
 }
 
 #[derive(Debug)]
