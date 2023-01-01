@@ -1,5 +1,6 @@
 use chrono::{DateTime, Local, NaiveTime};
 use clap::Parser;
+use git2::Repository;
 use std::env::current_dir;
 use std::ffi::OsStr;
 use std::fmt::{Display, Formatter};
@@ -19,6 +20,10 @@ struct Arguments {
     /// Command to run to open the newly created file
     #[arg(short, long)]
     editor: Option<String>,
+
+    /// Don't run git after editing the file
+    #[arg(long, default_value_t = false)]
+    no_git: bool,
 }
 
 fn main() -> Result<(), Error> {
@@ -39,6 +44,13 @@ fn main() -> Result<(), Error> {
 
     run_editor(editor, new_file_path.as_path())?;
 
+    if !args.no_git {
+        let repo = open_repo()?;
+
+        commit_file(args.title, new_file_path.as_path())?;
+
+        push_file()?;
+    }
 
     Ok(())
 }
@@ -137,6 +149,23 @@ fn run_editor(editor: String, file_path: &Path) -> Result<(), Error> {
         .map_err(|e| Error::from_error("Failed to start editor process", &e))?
         .wait()
 }
+
+fn open_repo(repository_path: &Path) -> Result<Repository, Error> {
+    Repository::discover(repository_path).map_err(|e| {
+        Error::from_error(
+            "Failed to open git repository",
+            &e,
+        )
+    })
+}
+
+fn commit_file(repo: Repository, title: &str, file_path: &Path) -> Result<(), Error> {
+    let mut index = repo.index()
+        .map_err(|e| Error::from_error("Failed to access git index", &e))?;
+    index.add_path(file_path)
+        .map_err(|e| Error::from_error("Failed to add file to git index", &e))?;
+
+    repo.
 }
 
 #[derive(Debug)]
