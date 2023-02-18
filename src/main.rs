@@ -105,7 +105,10 @@ tags = [{tags}]
 }
 
 fn create_safe_file_name(title: &str) -> String {
-    title.replace(&['\'', '"', '(', ')'], "")
+    title
+        .replace(&['\'', '"', '(', ')'], "")
+        .replace(' ', "-")
+        .to_lowercase()
 }
 
 fn get_editor_command_string(editor_path: Option<String>) -> Result<String, Error> {
