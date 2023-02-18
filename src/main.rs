@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local, NaiveTime};
+use chrono::{Local, NaiveDate};
 use clap::Parser;
 use std::env::current_dir;
 use std::ffi::OsStr;
@@ -24,10 +24,7 @@ struct Arguments {
 fn main() -> Result<(), Error> {
     let args = Arguments::parse();
 
-    let today = Local::now()
-        .date()
-        .and_time(NaiveTime::default())
-        .expect("NaiveTime should provide valid time");
+    let today = Local::now().date_naive();
 
     let content_dir = locate_content_directory()?;
 
@@ -78,7 +75,7 @@ fn locate_content_directory() -> Result<PathBuf, Error> {
 
 fn write_file_contents(
     title: &str,
-    date: DateTime<Local>,
+    date: NaiveDate,
     tags: Vec<String>,
     file_path: &Path,
 ) -> Result<(), Error> {
@@ -91,7 +88,7 @@ tags = [{tags}]
 +++
 "#,
         title = title,
-        date = date.to_rfc3339(),
+        date = date.format("%Y-%m-%d"),
         tags = tags
             .iter()
             .map(|s| format!(r#""{}""#, s))
